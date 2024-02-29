@@ -1,0 +1,195 @@
+Description: Creates a VPC with an Internet Gateway, 2 public subnets, 2 private subnets, 2 NAT Gateways, and the supporting Routes and Associations.
+Outputs:
+  PrivateSubnets:
+    Description: A list of the private subnets
+    Value: !Sub '${PrivateSubnet1},${PrivateSubnet2}'
+  PublicSubnets:
+    Description: A list of the public subnets
+    Value: !Sub '${PublicSubnet1},${PublicSubnet2}'
+  VPC:
+    Description: A reference to the created VPC
+    Value: !Ref 'VPC'
+Parameters:
+  PrivateSubnet1CIDR:
+    Default: 10.0.2.0/24
+    Description: CIDR Range for the private subnet in the first Availability Zone
+    Type: String
+  PrivateSubnet2CIDR:
+    Default: 10.0.3.0/24
+    Description: CIDR Range for the private subnet in the second Availability Zone
+    Type: String
+  PublicSubnet1CIDR:
+    Default: 10.0.0.0/24
+    Description: CIDR Range for the public subnet in the first Availability Zone
+    Type: String
+  PublicSubnet2CIDR:
+    Default: 10.0.1.0/24
+    Description: CIDR Range for the public subnet in the second Availability Zone
+    Type: String
+  VpcCIDR:
+    Default: 10.0.0.0/16
+    Description: CIDR Range for the VPC
+    Type: String
+Resources:
+  DefaultPrivateRoute1:
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref 'NatGateway1'
+      RouteTableId: !Ref 'PrivateRouteTable1'
+    Type: AWS::EC2::Route
+  DefaultPrivateRoute2:
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref 'NatGateway2'
+      RouteTableId: !Ref 'PrivateRouteTable2'
+    Type: AWS::EC2::Route
+  DefaultPublicRoute:
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref 'InternetGateway'
+      RouteTableId: !Ref 'PublicRouteTable'
+    Type: AWS::EC2::Route
+  InternetGateway:
+    Properties:
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+    Type: AWS::EC2::InternetGateway
+  NatGateway1:
+    Properties:
+      AllocationId: !GetAtt 'NatGateway1EIP.AllocationId'
+      SubnetId: !Ref 'PublicSubnet1'
+    Type: AWS::EC2::NatGateway
+  NatGateway1EIP:
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      Domain: vpc
+    Type: AWS::EC2::EIP
+  NatGateway2:
+    Properties:
+      AllocationId: !GetAtt 'NatGateway2EIP.AllocationId'
+      SubnetId: !Ref 'PublicSubnet2'
+    Type: AWS::EC2::NatGateway
+  NatGateway2EIP:
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      Domain: vpc
+    Type: AWS::EC2::EIP
+  PrivateRouteTable1:
+    Properties:
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub '${AWS::StackName} Private Routes (AZ1)'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::RouteTable
+  PrivateRouteTable2:
+    Properties:
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub '${AWS::StackName} Private Routes (AZ2)'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::RouteTable
+  PrivateSubnet1:
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      CidrBlock: !Ref 'PrivateSubnet1CIDR'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-PrivateSubnet1'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::Subnet
+  PrivateSubnet1RouteTableAssociation:
+    Properties:
+      RouteTableId: !Ref 'PrivateRouteTable1'
+      SubnetId: !Ref 'PrivateSubnet1'
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  PrivateSubnet2:
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      CidrBlock: !Ref 'PrivateSubnet2CIDR'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-PrivateSubnet2'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::Subnet
+  PrivateSubnet2RouteTableAssociation:
+    Properties:
+      RouteTableId: !Ref 'PrivateRouteTable2'
+      SubnetId: !Ref 'PrivateSubnet2'
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  PublicRouteTable:
+    Properties:
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub '${AWS::StackName} Public Routes'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::RouteTable
+  PublicSubnet1:
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      CidrBlock: !Ref 'PublicSubnet1CIDR'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-PublicSubnet1'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::Subnet
+  PublicSubnet1RouteTableAssociation:
+    Properties:
+      RouteTableId: !Ref 'PublicRouteTable'
+      SubnetId: !Ref 'PublicSubnet1'
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  PublicSubnet2:
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      CidrBlock: !Ref 'PublicSubnet2CIDR'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-PublicSubnet2'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::Subnet
+  PublicSubnet2RouteTableAssociation:
+    Properties:
+      RouteTableId: !Ref 'PublicRouteTable'
+      SubnetId: !Ref 'PublicSubnet2'
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  VPC:
+    Properties:
+      CidrBlock: !Ref 'VpcCIDR'
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+    Type: AWS::EC2::VPC
+  VPCGatewayAttachment:
+    Properties:
+      InternetGatewayId: !Ref 'InternetGateway'
+      VpcId: !Ref 'VPC'
+    Type: AWS::EC2::VPCGatewayAttachment

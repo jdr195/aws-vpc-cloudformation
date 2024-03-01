@@ -1,25 +1,80 @@
-from troposphere import GetAtt, Parameter, Ref, Sub, Tags, Template, GetAZs, Select, Output
+from troposphere import (
+    GetAZs,
+    GetAtt,
+    Output,
+    Parameter,
+    Ref,
+    Select,
+    Sub,
+    Tags,
+    Template,
+)
 from troposphere.constants import STRING
-from troposphere.ec2 import VPC, InternetGateway, VPCGatewayAttachment, Subnet, RouteTable, Route, SubnetRouteTableAssociation, EIP, NatGateway
+from troposphere.ec2 import (
+    EIP,
+    InternetGateway,
+    NatGateway,
+    Route,
+    RouteTable,
+    Subnet,
+    SubnetRouteTableAssociation,
+    VPC,
+    VPCGatewayAttachment,
+)
 
 
 def main():
-
     template = Template()
-    vpc_cidr = template.add_parameter(Parameter("VpcCIDR", Description="CIDR Range for the VPC", Type=STRING, Default="10.0.0.0/16"))
-    public_subnet_1_cidr = template.add_parameter(Parameter("PublicSubnet1CIDR", Description="CIDR Range for the public subnet in the first Availability Zone", Type=STRING, Default="10.0.0.0/24"))
-    public_subnet_2_cidr = template.add_parameter(Parameter("PublicSubnet2CIDR", Description="CIDR Range for the public subnet in the second Availability Zone", Type=STRING, Default="10.0.1.0/24"))
-    private_subnet_1_cidr = template.add_parameter(Parameter("PrivateSubnet1CIDR", Description="CIDR Range for the private subnet in the first Availability Zone", Type=STRING, Default="10.0.2.0/24"))
-    private_subnet_2_cidr = template.add_parameter(Parameter("PrivateSubnet2CIDR", Description="CIDR Range for the private subnet in the second Availability Zone", Type=STRING, Default="10.0.3.0/24"))
+    vpc_cidr = template.add_parameter(
+        Parameter(
+            "VpcCIDR",
+            Description="CIDR Range for the VPC",
+            Type=STRING,
+            Default="10.0.0.0/16",
+        )
+    )
+    public_subnet_1_cidr = template.add_parameter(
+        Parameter(
+            "PublicSubnet1CIDR",
+            Description="CIDR Range for the public subnet in the first Availability Zone",
+            Type=STRING,
+            Default="10.0.0.0/24",
+        )
+    )
+    public_subnet_2_cidr = template.add_parameter(
+        Parameter(
+            "PublicSubnet2CIDR",
+            Description="CIDR Range for the public subnet in the second Availability Zone",
+            Type=STRING,
+            Default="10.0.1.0/24",
+        )
+    )
+    private_subnet_1_cidr = template.add_parameter(
+        Parameter(
+            "PrivateSubnet1CIDR",
+            Description="CIDR Range for the private subnet in the first Availability Zone",
+            Type=STRING,
+            Default="10.0.2.0/24",
+        )
+    )
+    private_subnet_2_cidr = template.add_parameter(
+        Parameter(
+            "PrivateSubnet2CIDR",
+            Description="CIDR Range for the private subnet in the second Availability Zone",
+            Type=STRING,
+            Default="10.0.3.0/24",
+        )
+    )
 
-    template.set_description("Creates a VPC with an Internet Gateway, 2 public subnets, 2 private subnets, 2 NAT Gateways, and the supporting Routes and Associations.")
+    template.set_description(
+        "Creates a VPC with an Internet Gateway, 2 public subnets, 2 private subnets, 2 NAT Gateways, and the supporting Routes and Associations."
+    )
 
     tags = Tags(
         Application=Ref(
             "AWS::StackId",
         )
     )
-
     vpc = template.add_resource(
         VPC(
             "VPC",
@@ -29,14 +84,12 @@ def main():
             Tags=tags,
         )
     )
-
     internet_gateway = template.add_resource(
         InternetGateway(
             "InternetGateway",
             Tags=tags,
         )
     )
-
     vpc_gateway_attachment = template.add_resource(
         VPCGatewayAttachment(
             "VPCGatewayAttachment",
@@ -190,10 +243,21 @@ def main():
     template.add_output(
         [
             Output("VPC", Description="A reference to the created VPC", Value=Ref(vpc)),
-            Output("PublicSubnets", Description="A list of the public subnets", Value=Sub(f"${{{public_subnet_1.title}}},${{{public_subnet_2.title}}}")),
-            Output("PrivateSubnets", Description="A list of the private subnets", Value=Sub(f"${{{private_subnet_1.title}}},${{{private_subnet_2.title}}}")),
+            Output(
+                "PublicSubnets",
+                Description="A list of the public subnets",
+                Value=Sub(f"${{{public_subnet_1.title}}},${{{public_subnet_2.title}}}"),
+            ),
+            Output(
+                "PrivateSubnets",
+                Description="A list of the private subnets",
+                Value=Sub(
+                    f"${{{private_subnet_1.title}}},${{{private_subnet_2.title}}}"
+                ),
+            ),
         ]
     )
+
     print(template.to_yaml(clean_up=True))
     with open("template.yml", "w") as outfile:
         outfile.writelines(template.to_yaml(clean_up=True))
